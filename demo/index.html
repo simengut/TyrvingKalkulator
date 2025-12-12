@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tyrving 2014-tabell Kalkulator</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+      color: #444;
+    }
+    select, input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.2s;
+    }
+    select:focus, input:focus {
+      outline: none;
+      border-color: #007AFF;
+    }
+    .row {
+      display: flex;
+      gap: 12px;
+    }
+    .row .form-group {
+      flex: 1;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      background: #007AFF;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .result {
+      text-align: center;
+      padding: 20px;
+    }
+    .result.success {
+      background: #e8f5e9;
+      border: 2px solid #4caf50;
+    }
+    .result.error {
+      background: #ffebee;
+      border: 2px solid #f44336;
+    }
+    .points {
+      font-size: 64px;
+      font-weight: 700;
+      color: #2e7d32;
+      margin: 10px 0;
+    }
+    .points-label {
+      color: #666;
+      font-size: 14px;
+    }
+    .error-message {
+      color: #c62828;
+      font-size: 18px;
+    }
+    .details {
+      margin-top: 12px;
+      color: #666;
+      font-size: 14px;
+    }
+    .radio-group {
+      display: flex;
+      gap: 20px;
+    }
+    .radio-group label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: normal;
+      cursor: pointer;
+    }
+    .radio-group input {
+      width: auto;
+    }
+    .hint {
+      font-size: 12px;
+      color: #888;
+      margin-top: 4px;
+    }
+    #eventCount {
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Tyrving 2014-tabell</h1>
+
+  <div class="card">
+    <div class="row">
+      <div class="form-group">
+        <label for="gender">Kjønn</label>
+        <select id="gender">
+          <option value="gutter">Gutter</option>
+          <option value="jenter">Jenter</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="age">Alder</label>
+        <select id="age">
+          <option value="10">10 år</option>
+          <option value="11">11 år</option>
+          <option value="12">12 år</option>
+          <option value="13">13 år</option>
+          <option value="14">14 år</option>
+          <option value="15" selected>15 år</option>
+          <option value="16">16 år</option>
+          <option value="17">17 år</option>
+          <option value="18">18 år</option>
+          <option value="19">19 år</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="event">Øvelse</label>
+      <select id="event"></select>
+      <div id="eventCount"></div>
+    </div>
+
+    <div class="form-group">
+      <label for="result">Resultat</label>
+      <input type="text" id="result" placeholder="f.eks. 12.35 eller 1:28.54">
+      <div class="hint" id="resultHint">Tid: sekunder (12.35) eller minutter:sekunder (1:28.54). Felt: meter (4.55)</div>
+    </div>
+
+    <div class="form-group">
+      <label>Tidtaking</label>
+      <div class="radio-group">
+        <label>
+          <input type="radio" name="timing" value="automatic" checked>
+          Automatisk
+        </label>
+        <label>
+          <input type="radio" name="timing" value="manual">
+          Manuell
+        </label>
+      </div>
+    </div>
+
+    <button onclick="calculate()">Beregn poeng</button>
+  </div>
+
+  <div id="resultCard" class="card result" style="display: none;"></div>
+
+  <script type="module">
+    import {
+      calculatePoints,
+      getEventsForAgeAndGender,
+      EVENTS
+    } from '../dist/index.mjs';
+
+    // Make functions available globally
+    window.calculatePoints = calculatePoints;
+    window.getEventsForAgeAndGender = getEventsForAgeAndGender;
+    window.EVENTS = EVENTS;
+
+    // Populate events on load and when gender/age changes
+    function updateEvents() {
+      const gender = document.getElementById('gender').value;
+      const age = parseInt(document.getElementById('age').value);
+      const eventSelect = document.getElementById('event');
+      const currentValue = eventSelect.value;
+
+      const events = getEventsForAgeAndGender(age, gender);
+      events.sort((a, b) => a.displayName.localeCompare(b.displayName, 'no'));
+
+      eventSelect.innerHTML = events.map(e =>
+        `<option value="${e.id}">${e.displayName}</option>`
+      ).join('');
+
+      // Try to keep the same event selected if it exists
+      if (events.find(e => e.id === currentValue)) {
+        eventSelect.value = currentValue;
+      }
+
+      document.getElementById('eventCount').textContent =
+        `${events.length} øvelser tilgjengelig`;
+
+      updateHint();
+    }
+
+    function updateHint() {
+      const eventId = document.getElementById('event').value;
+      const event = EVENTS[eventId];
+      const hint = document.getElementById('resultHint');
+
+      if (event) {
+        if (event.kind === 'time') {
+          hint.textContent = 'Tid: sekunder (12.35) eller minutter:sekunder (1:28.54)';
+        } else {
+          hint.textContent = 'Felt: meter (f.eks. 4.55 eller 45.20)';
+        }
+      }
+    }
+
+    window.calculate = function() {
+      const eventId = document.getElementById('event').value;
+      const age = parseInt(document.getElementById('age').value);
+      const result = document.getElementById('result').value;
+      const timing = document.querySelector('input[name="timing"]:checked').value;
+
+      const output = calculatePoints({
+        eventId,
+        age,
+        result,
+        timing
+      });
+
+      const resultCard = document.getElementById('resultCard');
+      resultCard.style.display = 'block';
+
+      if (output.success) {
+        resultCard.className = 'card result success';
+        resultCard.innerHTML = `
+          <div class="points-label">POENG</div>
+          <div class="points">${output.points}</div>
+          <div class="details">
+            ${output.eventName} (${output.gender === 'gutter' ? 'Gutt' : 'Jente'} ${output.age} år)<br>
+            Resultat: ${output.unit === 'seconds' ? formatTime(output.parsedResult) : (output.parsedResult / 100).toFixed(2) + ' m'}
+            ${timing === 'manual' ? ' (manuell tid)' : ''}
+          </div>
+        `;
+      } else {
+        resultCard.className = 'card result error';
+        resultCard.innerHTML = `
+          <div class="error-message">${output.error}</div>
+        `;
+      }
+    };
+
+    function formatTime(seconds) {
+      if (seconds < 60) {
+        return seconds.toFixed(2) + ' s';
+      }
+      const mins = Math.floor(seconds / 60);
+      const secs = (seconds % 60).toFixed(2).padStart(5, '0');
+      return `${mins}:${secs}`;
+    }
+
+    // Event listeners
+    document.getElementById('gender').addEventListener('change', updateEvents);
+    document.getElementById('age').addEventListener('change', updateEvents);
+    document.getElementById('event').addEventListener('change', updateHint);
+
+    // Calculate on Enter key
+    document.getElementById('result').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        window.calculate();
+      }
+    });
+
+    // Initial load
+    updateEvents();
+  </script>
+</body>
+</html>
